@@ -1,0 +1,12 @@
+# Move this upstart script to /etc/init/webtesting.conf
+# Ensure groovy is installed via
+#   export SDKMAN_DIR="/usr/local/sdkman" && curl -s get.sdkman.io | bash
+description "HTTP API to run automated tests"
+
+start on filesystem
+
+script
+  PATH=$PATH:/usr/local/sdkman/candidates/groovy/current/bin
+  cd /opt/webtrends/webtesting
+  bin/webtesting
+end script

@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+
+# Idea
+.idea/
+*.ipr
+*.iws
+*.iml
+out/
+
+# Local settings
+config.local.groovy
+VERSION.txt
+
+*~

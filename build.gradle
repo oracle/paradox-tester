@@ -1,0 +1,60 @@
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply plugin: 'application'
+apply plugin: 'codenarc'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'log4j:log4j:1.2.+'
+    compile 'org.codehaus.groovy:groovy-all:2.4.+'
+    compile 'org.eclipse.jetty:jetty-servlet:9.3.6.+' //9.3.7.RC0 fails
+    compile 'org.glassfish.jersey.containers:jersey-container-servlet-core:2.+'
+    compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.+'
+    testCompile 'org.testng:testng:6.9.+'
+}
+
+mainClassName = 'webtesting.MainClass'
+jar.manifest.attributes 'Main-Class': mainClassName
+
+applicationDistribution.from('config.groovy', 'webtesting.upstart') { }
+
+test.useTestNG()
+
+idea {
+    project {
+        jdkName = '1.8'
+        vcs = 'Git'
+    }
+}
+
+codenarc {
+    toolVersion = '0.25.2'
+    configFile = new File('config/codenarc/codenarc.groovy')
+    maxPriority1Violations = 0
+    maxPriority2Violations = 0
+    maxPriority3Violations = Integer.MAX_VALUE
+    reportFormat = project.properties.'codenarc.reportFormat' ?: 'html'
+}
+
+// This emulates what the rundeck job would do
+task deployLocal(type: Exec, dependsOn: distZip) {
+    executable "sudo"
+    args "sh", "-c", """
+unzip -o $buildDir/distributions/webtesting.zip -d /opt/webtrends/
+mv /opt/webtrends/webtesting/webtesting.upstart /etc/init/webtesting.conf
+start webtesting || restart webtesting
+"""
+}
+
+task updateVersionTxt(type: Exec) {
+    executable 'git'
+    args 'log', '-n1', '--format=%h %ci', 'HEAD'
+    standardOutput = new File('VERSION.txt').newOutputStream()
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.14'
+}
