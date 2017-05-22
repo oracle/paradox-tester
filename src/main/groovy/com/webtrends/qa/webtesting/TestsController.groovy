@@ -26,7 +26,7 @@ class TestsController extends BaseController {
 
     @GET
     @Path('{suite}')
-    def list(@PathParam('suite') String suite) {
+    static list(@PathParam('suite') String suite) {
         def dir = new File([config.testRunner.testSuites, suite].join(File.separator))
         if (!dir.exists()) {
             log.error "No test suite named '$suite' was found"

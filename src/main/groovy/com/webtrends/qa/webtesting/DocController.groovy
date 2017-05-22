@@ -28,8 +28,8 @@ class DocController extends BaseController {
 
     @GET
     @Path('{suite}')
-    def show(@PathParam('suite') String suite) {
-        def testSuites = config.testRunner.testSuites as String
+    static show(@PathParam('suite') String suite) {
+        def testSuites = config.testRunner.testSuites
         def docs = new File("$testSuites/$suite/docs.json")
         if (!docs.exists()) {
             return Response.status(Response.Status.NOT_FOUND).build()

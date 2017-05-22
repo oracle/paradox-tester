@@ -44,7 +44,7 @@ class ResultsController extends BaseController {
 
     @GET
     @Path('{suite}/{id}')
-    def showJson(@PathParam('suite') String suite, @PathParam('id') String id) {
+    static showJson(@PathParam('suite') String suite, @PathParam('id') String id) {
         def text = showInternal(suite, id)
         if (!text) {
             log.error "No testResults.json found for '$suite'"
@@ -70,7 +70,7 @@ class ResultsController extends BaseController {
     @PUT
     @Path('{suite}/{id}')
     @Consumes('application/json')
-    def save(@PathParam('suite') String suite, @PathParam('id') String id, InputStream bodyStream) {
+    static save(@PathParam('suite') String suite, @PathParam('id') String id, InputStream bodyStream) {
         // Check arguments
         def file = new File([config.testRunner.testResults, suite, id, 'testResults.json'].join(File.separator))
         if (!file.exists()) {

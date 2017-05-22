@@ -35,7 +35,7 @@ class QueueController extends BaseController {
 
     @GET
     @Path('{suite}/{id}')
-    def show(@PathParam('suite') String suite, @PathParam('id') String id) {
+    static show(@PathParam('suite') String suite, @PathParam('id') String id) {
         def item = cache[suite]?.get(id)
         if (item == null) {
             return Response.status(Response.Status.NOT_FOUND).build()
@@ -197,7 +197,7 @@ class QueueController extends BaseController {
 
     @PUT
     @Path('{suite}/{id}')
-    def cancel(@PathParam('suite') String suite, @PathParam('id') String id) {
+    static cancel(@PathParam('suite') String suite, @PathParam('id') String id) {
         log.info "Cancelling item for assembly $suite and id $id"
         def item = cache[suite]?.get(id)
         if (!item) {
