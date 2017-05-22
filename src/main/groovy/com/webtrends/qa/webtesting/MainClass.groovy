@@ -39,7 +39,7 @@ class MainClass {
         def jsonHandler = new ServletContextHandler(ServletContextHandler.SESSIONS)
         jsonHandler.contextPath = '/'
         jsonHandler.addServlet(ServletContainer, '/webtesting/*').with {
-            setInitParameter('jersey.config.server.provider.packages', 'webtesting')
+            setInitParameter('jersey.config.server.provider.packages', 'com.webtrends.qa.webtesting')
             setInitParameter('com.sun.jersey.api.json.POJOMappingFeature', 'true')
         }
 

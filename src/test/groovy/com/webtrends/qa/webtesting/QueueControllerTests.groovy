@@ -7,6 +7,7 @@ import org.testng.annotations.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import groovyx.net.http.RESTClient
+import static org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS
 
 /**
  * Tests for the /queue endpoints
@@ -20,12 +21,11 @@ class QueueControllerTests {
 
     @BeforeClass
     def setupTestSuite() {
-        def isWindowsSystem = System.getProperty('os.name')?.startsWith('Windows')
-        def fileName = isWindowsSystem ? 'runTests.bat' : 'runTests'
-        def quote = isWindowsSystem ? '\"' : '\\\"'
-        def timeout = isWindowsSystem ? 'waitfor it /t 5' : 'sleep 5'
+        def fileName = IS_OS_WINDOWS ? 'runTests.bat' : 'runTests'
+        def quote = IS_OS_WINDOWS ? '\"' : '\\\"'
+        def timeout = IS_OS_WINDOWS ? 'waitfor it /t 5' : 'sleep 5'
         def testResultsJson = "echo { ${quote}tests$quote: [ ] } > " +
-                "${isWindowsSystem ? '%1\\testResults.json' : '$1/testResults.json'}"
+                "${IS_OS_WINDOWS ? '%1\\testResults.json' : '$1/testResults.json'}"
         def runTests = new File("tmpSuites/all-the-things/bin/$fileName")
         runTests.parentFile.mkdirs()
 
@@ -42,6 +42,7 @@ $testResultsJson
         runTests.executable = true
         QueueController.config.testRunner.testSuites = new File('tmpSuites').canonicalPath
         QueueController.config.testResults = new File('tmpResults').canonicalPath
+        QueueController.config.healthCheckEndpoint = new File('src/test/resources/healthcheck.json').toURI().toString()
     }
 
     @BeforeClass
@@ -157,7 +158,7 @@ $testResultsJson
     void testHealthCheck () {
         def resp = rest.post(
                 path: 'queue/all-the-things',
-                body: [testsToRun: 'All the things', environment: 'A-LAS'],
+                body: [testsToRun: 'All the things', environment: 'dev'],
                 requestContentType: 'application/json')
 
         def location = new URL(resp.headers.Location as String)
@@ -167,20 +168,17 @@ $testResultsJson
         resp = rest.get path: location.path
 
         def item = resp.data
-        def systemHealthCheckFile = [QueueController.config.testResults, item.Assembly,
-                                     item.Id, 'systemHealthCheck.json'].join(File.separator)
-        def testResultFile = [QueueController.config.testResults, item.Assembly,
-                              item.Id, 'testResults.json'].join(File.separator)
+        def workingDir = Paths.get(QueueController.config.testResults, item.Assembly as String, item.Id as String)
         assert item.Id ==~ '[a-zA-Z0-9]{10}'
         assert item.Assembly == 'all-the-things'
         assert item.Links.size() == 1
         assert item.Links[0] == "${url}results/all-the-things/$item.Id"
         assert item.TestsToRun == 'All the things'
-        assert item.Environment == 'A-LAS'
-        assert item.HealthCheck.name == item.Assembly + '.systemHealthCheck'
-        assert Files.exists(Paths.get(systemHealthCheckFile))
-        assert Files.exists(Paths.get(testResultFile))
-        def slurped = new JsonSlurper().parse(new File(testResultFile))
+        assert item.Environment == 'dev'
+        assert item.HealthCheck == "${url}results/all-the-things/$item.Id/systemHealthCheck.json"
+        assert Files.exists(workingDir.resolve('systemHealthCheck.json'))
+        assert Files.exists(workingDir.resolve('testResults.json'))
+        def slurped = new JsonSlurper().parse(workingDir.resolve('testResults.json').toFile())
         assert slurped.tests[0].name == item.Assembly + '.systemHealthCheck'
     }
 

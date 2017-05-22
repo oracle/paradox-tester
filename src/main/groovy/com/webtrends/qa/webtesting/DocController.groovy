@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response
 class DocController extends BaseController {
     @GET
     def index() {
-        def suites = new File(config.testRunner.testSuites as String).listFiles()
+        def suites = new File(config.testRunner.testSuites).listFiles()
         if (!suites) {
             log.error 'Config.groovy does not contain a valid location for testSuites'
             return Response.serverError().build()

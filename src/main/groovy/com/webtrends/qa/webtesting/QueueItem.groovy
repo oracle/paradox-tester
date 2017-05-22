@@ -17,9 +17,9 @@ class QueueItem {
     Date startTime
     List<String> links
     String environment
-    char[] credentials // char[] So that we can clear the contents once we no longer need it.
+    String credentials
     String output
-    Object healthCheck
+    String healthCheck
 
     def toMap() {
         [
@@ -33,11 +33,5 @@ class QueueItem {
                 HealthCheck: this.healthCheck,
                 Output: this.output,
         ]
-    }
-
-    def clearCredentials() {
-        if (credentials) {
-            Arrays.fill(credentials, 0 as char)
-        }
     }
 }
