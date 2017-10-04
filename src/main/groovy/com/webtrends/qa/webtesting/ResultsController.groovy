@@ -6,6 +6,8 @@ import groovy.util.logging.Log4j
 
 import javax.ws.rs.*
 import javax.ws.rs.core.*
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * Handles the /results endpoint for viewing results in json format.  The html format is handles by the default handler
@@ -14,24 +16,26 @@ import javax.ws.rs.core.*
 @Path('/results')
 @Produces('application/json')
 class ResultsController extends BaseController {
-    static final String VND_TYPE = 'application/vnd.webtrends.automationcommon+json'
+    class AcceptType {
+        static final VND_TYPE = 'application/vnd.webtrends.automationcommon+json'
+    }
 
     @GET
     def index() {
-        def suites = new File(config.testResults as String).listFiles()
+        def suites = Files.list(Paths.get(config.testResults))
         if (!suites) {
             log.error 'Config.groovy does not contain a valid location for testResults'
             return Response.serverError().build()
         }
 
-        def list = suites.collect { uriInfo.absolutePathBuilder.path(it.name).build().toString() }
+        def list = suites.collect { uriInfo.absolutePathBuilder.path(it.fileName.toString()).build().toString() }
         Response.ok(JsonOutput.toJson(list), 'application/json').build()
     }
 
     @GET
     @Path('{suite}')
     def list(@PathParam('suite') String suite) {
-        def results = new File([config.testResults, suite].join(File.separator)).listFiles()
+        def results = Paths.get(config.testResults, suite).toFile().listFiles()
 
         if (!results) {
             log.error "No results for suite named '$suite' was found"
@@ -44,8 +48,8 @@ class ResultsController extends BaseController {
 
     @GET
     @Path('{suite}/{id}')
-    def showJson(@PathParam('suite') String suite, @PathParam('id') String id) {
-        def text = showInternal(suite, id)
+    static showJson(@PathParam('suite') String suite, @PathParam('id') String id) {
+        def text = fileText(suite, id, 'testResults.json')
         if (!text) {
             log.error "No testResults.json found for '$suite'"
             return Response.status(Response.Status.NOT_FOUND).build()
@@ -56,24 +60,36 @@ class ResultsController extends BaseController {
 
     @GET
     @Path('{suite}/{id}')
-    @Produces(ResultsController.VND_TYPE)
+    @Produces(AcceptType.VND_TYPE)
     def showVnd(@PathParam('suite') String suite, @PathParam('id') String id) {
-        def text = showInternal(suite, id)
+        def text = fileText(suite, id, 'testResults.json')
         if (!text) {
             log.error "No testResults.json found for '$suite'"
             return Response.status(Response.Status.NOT_FOUND).build()
         }
 
-        Response.ok(text, VND_TYPE).build()
+        Response.ok(text, AcceptType.VND_TYPE).build()
+    }
+
+    @GET
+    @Path('{suite}/{id}/systemHealthCheck.json')
+    static showHealthCheck(@PathParam('suite') String suite, @PathParam('id') String id) {
+        def text = fileText(suite, id, 'systemHealthCheck.json')
+        if (!text) {
+            log.error "No systemHealthCheck.json found for '$suite'"
+            return Response.status(Response.Status.NOT_FOUND).build()
+        }
+
+        Response.ok(text, 'application/json').build()
     }
 
     @PUT
     @Path('{suite}/{id}')
     @Consumes('application/json')
-    def save(@PathParam('suite') String suite, @PathParam('id') String id, InputStream bodyStream) {
+    static save(@PathParam('suite') String suite, @PathParam('id') String id, InputStream bodyStream) {
         // Check arguments
-        def file = new File([config.testRunner.testResults, suite, id, 'testResults.json'].join(File.separator))
-        if (!file.exists()) {
+        def file = Paths.get(config.testResults, suite, id, 'testResults.json')
+        if (Files.notExists(file)) {
             log.error "suite $suite with id $id does not exist"
             return Response.status(Response.Status.NOT_FOUND).build()
         }
@@ -82,7 +98,7 @@ class ResultsController extends BaseController {
         try {
             body = new JsonSlurper().parse(new BufferedReader(new InputStreamReader(bodyStream)))
         } catch (e) {
-            log.error 'Was not able to read request body'
+            log.error 'Was not able to read request body', e
             return Response.status(Response.Status.BAD_REQUEST).build()
         }
 
@@ -90,8 +106,8 @@ class ResultsController extends BaseController {
         showJson(suite, id)
     }
 
-    private static showInternal(suite, id) {
-        def file = new File([config.testResults, suite, id, 'testResults.json'].join(File.separator))
-        file.exists() ? file.text : null
+    private static fileText(String ... more) {
+        def file = Paths.get(config.testResults, more)
+        Files.exists(file) ? file.text : null
     }
 }

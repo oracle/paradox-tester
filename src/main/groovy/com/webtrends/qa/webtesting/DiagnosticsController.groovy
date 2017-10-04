@@ -15,13 +15,13 @@ import javax.ws.rs.core.Response
 class DiagnosticsController {
     @GET
     @Path('ping')
-    def ping() {
+    static ping() {
         Response.ok('pong ' + System.currentTimeMillis()).build()
     }
 
     @GET
     @Path('healthcheck')
-    def healthcheck() {
+    static healthcheck() {
         def health = [
                 applicationName: 'webtesting',
                 version: (new File('VERSION.txt') << '').text,
@@ -34,13 +34,13 @@ class DiagnosticsController {
 
     @GET
     @Path('healthcheck/lb')
-    def healthcheckLb() {
+    static healthcheckLb() {
         Response.ok('UP').build()
     }
 
     @GET
     @Path('healthcheck/nagios')
-    def healthcheckNagios() {
+    static healthcheckNagios() {
         Response.ok('NORMAL|Thunderbirds are GO').build()
     }
 }

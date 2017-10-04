@@ -4,7 +4,10 @@ import groovy.util.logging.Log4j
 import groovy.json.*
 import javax.ws.rs.*
 import javax.ws.rs.core.*
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.security.SecureRandom
+import static org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS
 
 /**
  * Handles the /queue endpoint for kicking off new tests, cancelling and reviewing the status of running tests
@@ -35,7 +38,7 @@ class QueueController extends BaseController {
 
     @GET
     @Path('{suite}/{id}')
-    def show(@PathParam('suite') String suite, @PathParam('id') String id) {
+    static show(@PathParam('suite') String suite, @PathParam('id') String id) {
         def item = cache[suite]?.get(id)
         if (item == null) {
             return Response.status(Response.Status.NOT_FOUND).build()
@@ -49,21 +52,23 @@ class QueueController extends BaseController {
     @Consumes('application/json')
     def save(@PathParam('suite') String suite, InputStream bodyStream) {
         // Check arguments
-        if (!new File([config.testRunner.testSuites, suite].join(File.separator)).exists()) {
+
+        def suitePath = Paths.get(config.testRunner.testSuites, suite)
+        if (Files.notExists(suitePath)) {
             log.error "suite $suite does not exist"
             return Response.status(Response.Status.NOT_FOUND).build()
         }
 
-        if (!getExecutable(suite, 'runTests')) {
+        if (Files.notExists(suitePath.resolve(Paths.get('bin', "runTests${IS_OS_WINDOWS ? '.bat' : ''}")))) {
             log.error 'suite does not contain a script to run its tests'
             return Response.status(Response.Status.NOT_FOUND).build()
         }
 
-        def body
+        Map<String, String> body
         try {
-            body = new JsonSlurper().parse(new BufferedReader(new InputStreamReader(bodyStream)))
+            body = new JsonSlurper().parse(bodyStream) as Map<String, String>
         } catch (e) {
-            log.error 'Was not able to read request body'
+            log.error 'Was not able to read request body', e
             return Response.status(Response.Status.BAD_REQUEST).build()
         }
 
@@ -73,6 +78,8 @@ class QueueController extends BaseController {
         }
 
         QueueItem item = makeItem(suite, body)
+        createResultsDirectory(item)
+        fetchHealthCheck(item)
         runTests(item)
 
         // Add item to cache
@@ -83,25 +90,8 @@ class QueueController extends BaseController {
                 .build()
     }
 
-    private QueueItem makeItem(String suite, body) {
+    private QueueItem makeItem(String suite, Map<String, String> body) {
         def id = createId()
-        def resultsLocation = new File([config.testResults, suite, id].join(File.separator))
-        def healthCheck
-        resultsLocation.mkdirs()
-
-        if (body.environment) {
-            try {
-                def healthCheckEndpoint = new URL(config.healthCheckEndpoint)
-                def fullHealthCheck = new JsonSlurper().parse(healthCheckEndpoint)
-                def environmentHealthCheck = fullHealthCheck[body.environment]
-                healthCheck = getHealthCheck(environmentHealthCheck, suite, id)
-            }
-            catch (e) {
-                log.error 'Error occurred while contacting health check endpoint'
-            }
-        } else {
-            log.warn 'POST body did not contain a property called environment!'
-        }
 
         // A queue item to track the progress of an execution.
         new QueueItem(
@@ -111,74 +101,85 @@ class QueueController extends BaseController {
             startTime: new Date(),
             links: [uriInfo.absolutePathBuilder.path(id).build().toString()],
             environment: body.environment,
-            credentials: body.credentials,
-            healthCheck: healthCheck,
+            credentials: body.credentials ?: '',
+            healthCheck: uriInfo.baseUriBuilder.path("results/$suite/$id/systemHealthCheck.json").build().toString()
         )
     }
 
-    def getHealthCheck(Object environmentValues, String suite, String id) {
-        def state = environmentValues.any { it.boxroles.any { it.status == 'down' } } ? 'FAIL' : 'PASS'
-        def systemHealthCheckFile = new File([config.testResults, suite, id, 'systemHealthCheck.json']
-                .join(File.separator))
+    static createResultsDirectory(QueueItem item) {
+        Files.createDirectories(Paths.get(config.testResults, item.assembly, item.id))
+    }
 
-        def reducedEnvironmentValues = environmentValues.collectEntries {
+    static private fetchHealthCheck(QueueItem item) {
+        if (item.environment) {
+            try {
+                def healthCheck = parseHealthCheck(new URL(config.healthCheckEndpoint), item.environment)
+                writeHealthCheck(healthCheck, item.assembly, item.id)
+            }
+            catch (e) {
+                log.error 'Error occurred while contacting health check endpoint', e
+            }
+        } else {
+            log.warn 'POST body did not contain a property called environment!'
+        }
+    }
+
+    static parseHealthCheck(URL healthCheck, String environment) {
+        new JsonSlurper().parse(healthCheck)[environment]?.collectEntries {
             [ it.shortname, it.boxroles.findAll { it.service != 'chef-client' } .collectEntries {
                 [ service: it.service.trim() , status: it.status.trim() , version: it.version.trim() ]
             } ]
-        } .findAll { it.value }
-
-        def url = uriInfo.baseUriBuilder.path("results/$suite/$id/systemHealthCheck.json").build().toString()
-        def json = [id: '', name: suite + '.systemHealthCheck', label: '', state: state, comment: url, defect: null]
-
-        systemHealthCheckFile.write(JsonOutput.toJson(reducedEnvironmentValues))
-        json
+        } ?.findAll { it.value }
     }
 
-    static spliceHealthCheck(QueueItem item) {
-        def testResultsFile = new File([config.testResults, item.assembly, item.id,
-                                        'testResults.json'].join(File.separator))
-        def slurped = new JsonSlurper().parse(testResultsFile)
+    static void writeHealthCheck(healthCheck, String suite, String id) {
+        Paths.get(config.testResults, suite, id, 'systemHealthCheck.json').write JsonOutput.toJson(healthCheck)
+    }
 
-        slurped.tests.add(0, item.healthCheck)
+    static void spliceHealthCheck(QueueItem item) {
+        def slurper = new JsonSlurper()
 
-        def jsonOutput = JsonOutput.toJson(slurped)
-        testResultsFile.write(jsonOutput)
+        def overallHealth = slurper.parse(item.healthCheck.toURL(), requestProperties: [Accept: 'application/json'])
+            .any { it.value.status == 'down' } ? 'FAIL' : 'PASS'
+
+        def additionalTest = [
+            name: item.assembly + '.systemHealthCheck',
+            state: overallHealth,
+            comment: item.healthCheck
+        ]
+
+        def results = Paths.get(config.testResults, item.assembly, item.id, 'testResults.json').toFile()
+        def contents = slurper.parse(results)
+        contents.tests.add(0, additionalTest)
+        results.write(JsonOutput.toJson(contents))
     }
 
     private runTests(QueueItem item) {
-        // Create location for results
-        def resultsLocation = new File([config.testResults, item.assembly, item.id].join(File.separator))
-        def logFile = new File(resultsLocation, 'logOutput.txt')
-        if (!logFile.createNewFile()) {
-            throw new IOException("Unable to create $logFile")
-        }
-
-        item.output = uriInfo.baseUriBuilder.path("results/$item.assembly/$item.id/$logFile.name").build().toString()
+        def resultsDir = Paths.get(config.testResults)
+        def relativeLogFile = Paths.get(item.assembly, item.id, 'logOutput.txt')
+        def logFile = Files.createFile(resultsDir.resolve(relativeLogFile))
+        item.output = uriInfo.baseUriBuilder.path("results/$relativeLogFile").build().toString()
 
         // Run the tests
-        def executable = getExecutable(item.assembly, 'runTests')
-        def cmd = "$executable.path $resultsLocation.path $item.environment $item.testsToRun"
-        def workingDirectory = new File([config.testRunner.testSuites, item.assembly].join(File.separator))
+        def executable = Paths.get('bin', "runTests${IS_OS_WINDOWS ? '.bat' : ''}")
+        def cmd = "$executable ${resultsDir.resolve(logFile.parent)} $item.environment $item.testsToRun"
+        def workingDirectory = Paths.get(config.testRunner.testSuites, item.assembly)
         log.info "$item.id Running '$cmd'"
-        item.process = cmd.execute(null as List, workingDirectory)
-        def printer = new PrintWriter(new BufferedOutputStream(item.process.out))
-        printer.println item.credentials
-        printer.flush()
-        item.clearCredentials()
-
+        item.process = cmd.execute(null as List, workingDirectory.toFile())
+        item.process.out << item.credentials
+        item.credentials = 'REDACTED'
         log.info "$item.id Waiting for up to $config.testRunner.timeout ms before killing"
-        Thread.start {
-            item.process.in.eachLine {
-                log.info("$item.id $it")
+
+        item.process.consumeProcessOutput(
+            closureWriter {
+                log.info it
+                logFile << "$it\n"
+            },
+            closureWriter {
+                log.error it
                 logFile << "$it\n"
             }
-        }
-        Thread.start {
-            item.process.err.eachLine {
-                log.error("$item.id $it")
-                logFile << "$it\n"
-            }
-        }
+        )
 
         // Wait for the tests to finish in background.  When done, update status and links
         Thread.start {
@@ -191,13 +192,16 @@ class QueueController extends BaseController {
             if (item.healthCheck) {
                 spliceHealthCheck(item)
             }
-
         }
+    }
+
+    static closureWriter(Closure closure) {
+        [write: { byte[] bytes, offset, len -> new String(bytes).eachLine(closure) } ] as OutputStream
     }
 
     @PUT
     @Path('{suite}/{id}')
-    def cancel(@PathParam('suite') String suite, @PathParam('id') String id) {
+    static cancel(@PathParam('suite') String suite, @PathParam('id') String id) {
         log.info "Cancelling item for assembly $suite and id $id"
         def item = cache[suite]?.get(id)
         if (!item) {
@@ -216,6 +220,6 @@ class QueueController extends BaseController {
     }
 
     private static createId() {
-        new SecureRandom().with { (0..9).collect { (('A'..'Z') + ('a'..'z') + (0..9))[nextInt(62)] } }.join()
+        new SecureRandom().with { (0..9).collect { (('A'..'Z') + ('a'..'z') + ('0'..'9'))[nextInt(62)] } }.join('')
     }
 }

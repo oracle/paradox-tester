@@ -3,10 +3,14 @@ package com.webtrends.qa.webtesting
 import groovy.json.JsonSlurper
 import groovy.util.logging.Log4j
 import groovyx.net.http.ContentType
+import org.apache.http.HttpEntity
 import org.apache.http.entity.ContentType as EntityContentType
 import org.eclipse.jetty.server.Server
 import org.testng.annotations.*
 import groovyx.net.http.RESTClient
+
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * Tests for the /results endpoints
@@ -21,10 +25,10 @@ class ResultsControllerTests {
 
     @BeforeMethod
     def setupResults() {
-        ResultsController.config.testRunner.testResults = new File('tmpResults').canonicalPath
+        ResultsController.config.testResults = new File('tmpResults').canonicalPath
         rest.contentType = ContentType.JSON
-        def results = new File('tmpResults/all-the-things/someIdHere/testResults.json')
-        results.parentFile.mkdirs()
+        def results = Paths.get('tmpResults/all-the-things/someIdHere/testResults.json')
+        Files.createDirectories(results.parent)
         results.write '''
 {
     "name": "all-the-things",
@@ -36,7 +40,7 @@ class ResultsControllerTests {
     ]
 }
 '''
-        def html = new File('tmpResults/all-the-things/someIdHere/index.html')
+        def html = Paths.get('tmpResults/all-the-things/someIdHere/index.html')
         html.write '''
 <html>
 <body>
@@ -89,14 +93,14 @@ Non empty html body
             [ContentType.ANY, ContentType.HTML], // The results endpoint should return html by default,
             [ContentType.HTML, ContentType.HTML], // HTML when specifically requested, and
             [ContentType.JSON, ContentType.JSON], // JSON when specifically requested
-            [ResultsController.VND_TYPE, ResultsController.VND_TYPE], // specialty type
+            [ResultsController.AcceptType.VND_TYPE, ResultsController.AcceptType.VND_TYPE], // specialty type
         ]
     }
 
     @Test(dataProvider = 'acceptHeaderMimeTypePairs')
     void getResultsWithAcceptHeader(requestContentType, responseContentType) {
         def resp = rest.get (path: 'results/all-the-things/someIdHere', contentType: requestContentType)
-        def contentType = EntityContentType.get resp.entity
+        def contentType = EntityContentType.get(resp.entity as HttpEntity)
         assert contentType.mimeType == responseContentType.toString()
     }
 

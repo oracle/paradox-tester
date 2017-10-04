@@ -1,0 +1,46 @@
+{
+    "dev": [
+        {
+            "shortname": "web-service",
+            "boxroles": [
+                {
+                    "status": "down",
+                    "version": "2.0",
+                    "service": "web-service"
+                }
+            ]
+        },
+        {
+            "shortname": "database",
+            "boxroles": [
+                {
+                    "status": "up",
+                    "version": "1.0",
+                    "service": "database"
+                }
+            ]
+        }
+    ],
+    "prod": [
+        {
+            "shortname": "web-service",
+            "boxroles": [
+                {
+                    "status": "up",
+                    "version": "1.0",
+                    "service": "web-service"
+                }
+            ]
+        },
+        {
+            "shortname": "database",
+            "boxroles": [
+                {
+                    "status": "up",
+                    "version": "1.0",
+                    "service": "database"
+                }
+            ]
+        }
+    ]
+}
