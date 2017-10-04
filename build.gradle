@@ -2,6 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'idea'
 apply plugin: 'application'
 apply plugin: 'codenarc'
+apply plugin: 'maven-publish'
 
 repositories {
     mavenCentral()
@@ -30,8 +31,35 @@ idea {
     }
 }
 
+version = Boolean.parseBoolean(System.properties['release']) ? '1.0.0' : '2.0.0-SNAPSHOT'
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId rootProject.name
+        }
+    }
+
+    repositories { maven { url "$buildDir/repo" } }
+}
+
+if (project.hasProperty('artifactoryPublish')) {
+    artifactory {
+        publish {
+            repository {
+                maven = true
+            }
+            defaults {
+                publications('mavenJava')
+                publishPom = true
+            }
+        }
+    }
+}
+
 codenarc {
-    toolVersion = '0.25.2'
+    toolVersion = '1.0'
     configFile = new File('config/codenarc/codenarc.groovy')
     maxPriority1Violations = 0
     maxPriority2Violations = 0
