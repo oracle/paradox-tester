@@ -145,7 +145,11 @@ class QueueController extends BaseController {
         def additionalTest = [
             name: item.assembly + '.systemHealthCheck',
             state: overallHealth,
-            comment: item.healthCheck
+            comment: item.healthCheck,
+            labels: [],
+            performance: '',
+            defect: ''
+
         ]
 
         def results = Paths.get(config.testResults, item.assembly, item.id, 'testResults.json').toFile()
