@@ -31,7 +31,7 @@ idea {
     }
 }
 
-version = Boolean.parseBoolean(System.properties['release']) ? '1.0.0' : '2.0.0-SNAPSHOT'
+version = Boolean.parseBoolean(System.properties['release']) ? '1.0.1' : '2.0.0-SNAPSHOT'
 
 publishing {
     publications {
