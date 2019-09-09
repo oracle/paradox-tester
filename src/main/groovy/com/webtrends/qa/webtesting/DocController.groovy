@@ -1,7 +1,7 @@
 package com.webtrends.qa.webtesting
 
 import groovy.json.JsonOutput
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 
 import javax.ws.rs.GET
 import javax.ws.rs.Path
@@ -11,7 +11,7 @@ import javax.ws.rs.core.Response
 /**
  * Handles the /doc endpoints for getting test names, descriptions, ids, test steps and assertions
  */
-@Log4j
+@Log4j2
 @Path('/doc')
 class DocController extends BaseController {
     @GET

@@ -1,7 +1,7 @@
 package com.webtrends.qa.webtesting
 
 import groovy.json.JsonOutput
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 
 import javax.ws.rs.GET
 import javax.ws.rs.Path
@@ -10,7 +10,7 @@ import javax.ws.rs.core.Response
 /**
  * Handles ping and healthcheck endpoints
  */
-@Log4j
+@Log4j2
 @Path('/')
 class DiagnosticsController {
     @GET

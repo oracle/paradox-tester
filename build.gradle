@@ -8,8 +8,19 @@ repositories {
     mavenCentral()
 }
 
+// Exclude log4j 1.x from transitive dependencies
+configurations {
+    all*.exclude group: 'log4j', module: 'log4j'
+    all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+}
+
+def log4j2Version = '2.12.0'
 dependencies {
-    compile 'log4j:log4j:1.2.+'
+    compile "org.apache.logging.log4j:log4j-api:$log4j2Version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j2Version"
+    compile "org.apache.logging.log4j:log4j-1.2-api:$log4j2Version"
+    compile "org.apache.logging.log4j:log4j-jcl:$log4j2Version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j2Version"
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.+'
     compile 'org.codehaus.groovy:groovy-all:2.4.+'
     compile 'org.eclipse.jetty:jetty-servlet:9.3.6.+' //9.3.7.RC0 fails
@@ -31,7 +42,7 @@ idea {
     }
 }
 
-version = Boolean.parseBoolean(System.properties['release']) ? '1.0.1' : '2.0.0-SNAPSHOT'
+version = Boolean.parseBoolean(System.properties['release']) ? '2.1.0' : '2.1.0-SNAPSHOT'
 
 publishing {
     publications {
@@ -71,8 +82,8 @@ codenarc {
 task deployLocal(type: Exec, dependsOn: distZip) {
     executable "sudo"
     args 'sh', '-c', """
-unzip -o $buildDir/distributions/webtesting.zip -d /opt/webtrends/
-mv /opt/webtrends/webtesting/webtesting.upstart /etc/init/webtesting.conf
+unzip -o $buildDir/distributions/webtesting.zip -d /opt/infinity/
+mv /opt/infinity/webtesting/webtesting.upstart /etc/init/webtesting.conf
 start webtesting || restart webtesting
 """.toString()
 }
@@ -84,5 +95,5 @@ task updateVersionTxt(type: Exec) {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.1'
+    gradleVersion = '4.10.2'
 }

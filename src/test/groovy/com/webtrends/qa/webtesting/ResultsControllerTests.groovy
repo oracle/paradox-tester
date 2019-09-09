@@ -1,7 +1,7 @@
 package com.webtrends.qa.webtesting
 
 import groovy.json.JsonSlurper
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 import groovyx.net.http.ContentType
 import org.apache.http.HttpEntity
 import org.apache.http.entity.ContentType as EntityContentType
@@ -15,7 +15,7 @@ import java.nio.file.Paths
 /**
  * Tests for the /results endpoints
  */
-@Log4j
+@Log4j2
 class ResultsControllerTests {
     Server server
 

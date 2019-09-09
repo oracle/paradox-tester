@@ -1,7 +1,7 @@
 package com.webtrends.qa.webtesting
 
 import groovy.json.JsonOutput
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 
 import javax.ws.rs.*
 import javax.ws.rs.core.*
@@ -12,7 +12,7 @@ import static org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS
 /**
  * Handles the /tests endpoints for viewing available tests to run.  Calls out to getTests to get the list of tests.
  */
-@Log4j
+@Log4j2
 @Path('/tests')
 class TestsController extends BaseController {
     @GET
