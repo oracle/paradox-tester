@@ -2,7 +2,7 @@ package com.webtrends.qa.webtesting
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 
 import javax.ws.rs.*
 import javax.ws.rs.core.*
@@ -12,7 +12,7 @@ import java.nio.file.Paths
 /**
  * Handles the /results endpoint for viewing results in json format.  The html format is handles by the default handler
  */
-@Log4j
+@Log4j2
 @Path('/results')
 @Produces('application/json')
 class ResultsController extends BaseController {

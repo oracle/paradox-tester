@@ -1,7 +1,7 @@
 package com.webtrends.qa.webtesting
 
 import groovy.json.JsonSlurper
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 import org.eclipse.jetty.server.Server
 import org.testng.annotations.*
 import java.nio.file.Files
@@ -12,7 +12,7 @@ import static org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS
 /**
  * Tests for the /queue endpoints
  */
-@Log4j
+@Log4j2
 class QueueControllerTests {
     Server server
     def port = QueueController.config.port as int

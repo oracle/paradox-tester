@@ -1,6 +1,6 @@
 package com.webtrends.qa.webtesting
 
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 
 import javax.ws.rs.core.Context
 import javax.ws.rs.core.Request
@@ -10,7 +10,7 @@ import java.nio.file.Paths
 /**
  * A controller for others to inherit from.  Handles creating and loading a config object
  */
-@Log4j
+@Log4j2
 class BaseController {
     @Context
     Request request

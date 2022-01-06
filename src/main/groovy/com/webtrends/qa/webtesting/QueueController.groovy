@@ -1,6 +1,6 @@
 package com.webtrends.qa.webtesting
 
-import groovy.util.logging.Log4j
+import groovy.util.logging.Log4j2
 import groovy.json.*
 import javax.ws.rs.*
 import javax.ws.rs.core.*
@@ -12,7 +12,7 @@ import static org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS
 /**
  * Handles the /queue endpoint for kicking off new tests, cancelling and reviewing the status of running tests
  */
-@Log4j
+@Log4j2
 @Path('/queue')
 class QueueController extends BaseController {
     @Context
