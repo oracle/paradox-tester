@@ -2,6 +2,8 @@
 .gradle/
 build/
 gradle-app.setting
+gradle
+gradlew*
 
 # Idea
 .idea/
