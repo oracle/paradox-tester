@@ -1,8 +1,10 @@
-apply plugin: 'groovy'
-apply plugin: 'idea'
-apply plugin: 'application'
-apply plugin: 'codenarc'
-apply plugin: 'maven-publish'
+plugins {
+    id 'groovy'
+    id 'idea'
+    id 'application'
+    id 'codenarc'
+    id 'maven-publish'
+}
 
 repositories {
     mavenCentral()
@@ -14,18 +16,18 @@ configurations {
     all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
 }
 
-def log4j2Version = '2.12.0'
+def log4j2Version = '2.17.1'
 dependencies {
-    compile "org.apache.logging.log4j:log4j-api:$log4j2Version"
-    compile "org.apache.logging.log4j:log4j-core:$log4j2Version"
-    compile "org.apache.logging.log4j:log4j-1.2-api:$log4j2Version"
-    compile "org.apache.logging.log4j:log4j-jcl:$log4j2Version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j2Version"
-    compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.+'
-    compile 'org.codehaus.groovy:groovy-all:2.4.+'
-    compile 'org.eclipse.jetty:jetty-servlet:9.3.6.+' //9.3.7.RC0 fails
-    compile 'org.glassfish.jersey.containers:jersey-container-servlet-core:2.26-b03'
-    testCompile 'org.testng:testng:6.9.+'
+    implementation "org.apache.logging.log4j:log4j-api:$log4j2Version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j2Version"
+    implementation "org.apache.logging.log4j:log4j-1.2-api:$log4j2Version"
+    implementation "org.apache.logging.log4j:log4j-jcl:$log4j2Version"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j2Version"
+    implementation 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.+'
+    implementation 'org.codehaus.groovy:groovy-all:2.4.+'
+    implementation 'org.eclipse.jetty:jetty-servlet:9.3.6.+' //9.3.7.RC0 fails
+    implementation 'org.glassfish.jersey.containers:jersey-container-servlet-core:2.26-b03'
+    testImplementation 'org.testng:testng:6.9.+'
 }
 
 mainClassName = 'com.webtrends.qa.webtesting.MainClass'
@@ -42,7 +44,7 @@ idea {
     }
 }
 
-version = Boolean.parseBoolean(System.properties['release']) ? '2.1.0' : '2.1.0-SNAPSHOT'
+version = Boolean.parseBoolean(System.properties['release']) ? '2.1.1' : '2.1.1-SNAPSHOT'
 
 publishing {
     publications {
@@ -94,6 +96,7 @@ task updateVersionTxt(type: Exec) {
     standardOutput = new File('VERSION.txt').newOutputStream()
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.10.2'
+// This packages a specific version of gradle, insulating us from jenkin's gradle updates
+task prepareWrapper(type: Wrapper) {
+    gradleVersion = '7.0'
 }
