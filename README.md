@@ -1,4 +1,5 @@
-# Contributing
+# paradox tester
+
 ## Installing Java
 
 https://www.java.com/en/download/
@@ -60,3 +61,17 @@ class to `webtesting.MainClass`
 ### healthcheck/ (GET)
 ### healthcheck/lb (GET)
 ### healthcheck/nagios (GET)
+
+## Contributing
+
+This project is not accepting external contributions at this time. For bugs or enhancement requests, please file a GitHub issue unless it’s security related. When filing a bug remember that the better written the bug is, the more likely it is to be fixed. If you think you’ve found a security vulnerability, do not raise a GitHub issue and follow the instructions in our [security policy](./SECURITY.md).
+
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+
+## License
+
+Copyright (c) 2016, 2023 Oracle and/or its affiliates.
+
+Released under the Apache License 2.0
